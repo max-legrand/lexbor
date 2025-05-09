@@ -208,7 +208,13 @@ pub fn build(b: *std.Build) void {
         "lexbor/source/lexbor/ns/ns.c",
     };
 
-    const ports_src = [_][]const u8{
+    const ports_posix_src = [_][]const u8{
+        "lexbor/source/lexbor/ports/posix/lexbor/core/fs.c",
+        "lexbor/source/lexbor/ports/posix/lexbor/core/memory.c",
+        "lexbor/source/lexbor/ports/posix/lexbor/core/perf.c",
+    };
+
+    const ports_windows_src = [_][]const u8{
         "lexbor/source/lexbor/ports/windows_nt/lexbor/core/fs.c",
         "lexbor/source/lexbor/ports/windows_nt/lexbor/core/memory.c",
         "lexbor/source/lexbor/ports/windows_nt/lexbor/core/perf.c",
@@ -255,7 +261,9 @@ pub fn build(b: *std.Build) void {
     for (utils_src) |src| sources_list.append(src) catch @panic("Failed to add to list");
 
     if (target.query.os_tag == .windows) {
-        for (ports_src) |src| sources_list.append(src) catch @panic("Failed to add to list");
+        for (ports_windows_src) |src| sources_list.append(src) catch @panic("Failed to add to list");
+    } else {
+        for (ports_posix_src) |src| sources_list.append(src) catch @panic("Failed to add to list");
     }
 
     const lib = b.addStaticLibrary(.{
@@ -265,8 +273,15 @@ pub fn build(b: *std.Build) void {
         .link_libc = true,
     });
 
+    const cflags = [_][]const u8{
+        "-DLEXBOR_STATIC",
+        "-std=c99",
+        "-fno-sanitize=undefined",
+        "-fno-lto",
+        "-fvisibility=default",
+    };
     for (sources_list.items) |src| {
-        lib.addCSourceFile(.{ .file = b.path(src), .flags = &.{} });
+        lib.addCSourceFile(.{ .file = b.path(src), .flags = &cflags });
     }
 
     lib.addIncludePath(b.path("lexbor/source"));
